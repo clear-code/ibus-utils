@@ -48,6 +48,17 @@ modes_dict = {
         "latin":         "InputMode.Latin",
         "wide-latin":    "InputMode.WideLatin",
     },
+    "kkc": {
+        "on":            "InputMode.Hiragana",
+        "active":        "InputMode.Hiragana",
+        "hiragana":      "InputMode.Hiragana",
+        "off":           "InputMode.Direct",
+        "inactive":      "InputMode.Direct",
+        "katakana":      "InputMode.Katakana",
+        "half-katakana": "InputMode.HankakuKatakana",
+        "latin":         "InputMode.Latin",
+        "wide-latin":    "InputMode.WideLatin",
+    },
 }
 
 engine = ic.get_engine()
