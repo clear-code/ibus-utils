@@ -15,12 +15,102 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import sys
+import json
 from gi import require_version as gi_require_version
 gi_require_version('GLib', '2.0')
 gi_require_version('IBus', '1.0')
 from gi.repository import IBus
 from gi.repository import GLib
+
+modes_dict_default = {
+    "anthy": {
+        "on":            "InputMode.Hiragana",
+        "active":        "InputMode.Hiragana",
+        "hiragana":      "InputMode.Hiragana",
+        "off":           "InputMode.Latin",
+        "inactive":      "InputMode.Latin",
+        "katakana":      "InputMode.Katakana",
+        "half-katakana": "InputMode.HalfWidthKatakana",
+        "latin":         "InputMode.Latin",
+        "wide-latin":    "InputMode.WideLatin",
+    },
+    "kkc": {
+        "on":            "InputMode.Hiragana",
+        "active":        "InputMode.Hiragana",
+        "hiragana":      "InputMode.Hiragana",
+        "off":           "InputMode.Direct",
+        "inactive":      "InputMode.Direct",
+        "katakana":      "InputMode.Katakana",
+        "half-katakana": "InputMode.HankakuKatakana",
+        "latin":         "InputMode.Latin",
+        "wide-latin":    "InputMode.WideLatin",
+    },
+    "mozc-jp": {
+        "on":            "InputMode.Hiragana",
+        "active":        "InputMode.Hiragana",
+        "hiragana":      "InputMode.Hiragana",
+        "off":           "InputMode.Direct",
+        "inactive":      "InputMode.Direct",
+        "katakana":      "InputMode.Katakana",
+        "half-katakana": "InputMode.HalfWidthKatakana",
+        "latin":         "InputMode.Latin",
+        "wide-latin":    "InputMode.WideLatin",
+    },
+    "skk": {
+        "on":            "InputMode.Hiragana",
+        "active":        "InputMode.Hiragana",
+        "hiragana":      "InputMode.Hiragana",
+        "off":           "InputMode.Latin",
+        "inactive":      "InputMode.Latin",
+        "katakana":      "InputMode.Katakana",
+        "half-katakana": "InputMode.HankakuKatakana",
+        "latin":         "InputMode.Latin",
+        "wide-latin":    "InputMode.WideLatin",
+    },
+}
+
+
+def load_config_file(path):
+    conf = dict()
+    try:
+        with open(path, "r") as f:
+            conf.update(json.load(f))
+    except Exception as e:
+        pass
+    return conf
+
+
+def load_config_dir(confdir):
+    conf = dict()
+    try:
+        files = os.listdir(confdir)
+        for filename in files:
+            path = os.path.join(confdir, filename)
+            conf.update(load_config_file(path))
+    except Exception as e:
+        pass
+    return conf
+
+
+def load_config_path(path):
+    conf = dict()
+    if (os.path.isdir(path)):
+        conf.update(load_config_dir(path))
+    elif (os.path.isfile(path)):
+        conf.update(load_config_file(path))
+    return conf
+
+
+def load_config():
+    conf = dict(modes_dict_default)
+    system_config_path = "/etc/ibus-set-input-mode"
+    conf.update(load_config_path(system_config_path))
+    user_config_path = os.path.expanduser("~/.config/ibus-set-input-mode")
+    conf.update(load_config_path(user_config_path))
+    return conf
+
 
 if (len(sys.argv) != 2):
     sys.stderr.write('''Usage: %s MODE
@@ -40,55 +130,10 @@ ic.set_capabilities(IBus.Capabilite.FOCUS | IBus.Capabilite.PROPERTY)
 
 ic.focus_in()
 
-modes_dict = {
-    "anthy": {
-        "on":            "InputMode.Hiragana",
-        "active":        "InputMode.Hiragana",
-        "hiragana":      "InputMode.Hiragana",
-        "off":           "InputMode.Latin",
-        "inactive":      "InputMode.Latin",
-        "katakana":      "InputMode.Katakana",
-        "half-katakana": "InputMode.HalfWidthKatakana",
-        "latin":         "InputMode.Latin",
-        "wide-latin":    "InputMode.WideLatin",
-    },
-    "mozc-jp": {
-        "on":            "InputMode.Hiragana",
-        "active":        "InputMode.Hiragana",
-        "hiragana":      "InputMode.Hiragana",
-        "off":           "InputMode.Direct",
-        "inactive":      "InputMode.Direct",
-        "katakana":      "InputMode.Katakana",
-        "half-katakana": "InputMode.HalfWidthKatakana",
-        "latin":         "InputMode.Latin",
-        "wide-latin":    "InputMode.WideLatin",
-    },
-    "kkc": {
-        "on":            "InputMode.Hiragana",
-        "active":        "InputMode.Hiragana",
-        "hiragana":      "InputMode.Hiragana",
-        "off":           "InputMode.Direct",
-        "inactive":      "InputMode.Direct",
-        "katakana":      "InputMode.Katakana",
-        "half-katakana": "InputMode.HankakuKatakana",
-        "latin":         "InputMode.Latin",
-        "wide-latin":    "InputMode.WideLatin",
-    },
-    "skk": {
-        "on":            "InputMode.Hiragana",
-        "active":        "InputMode.Hiragana",
-        "hiragana":      "InputMode.Hiragana",
-        "off":           "InputMode.Latin",
-        "inactive":      "InputMode.Latin",
-        "katakana":      "InputMode.Katakana",
-        "half-katakana": "InputMode.HankakuKatakana",
-        "latin":         "InputMode.Latin",
-        "wide-latin":    "InputMode.WideLatin",
-    },
-}
-
 engine = ic.get_engine()
 engine_name = engine.get_name()
+
+modes_dict = load_config()
 
 if (engine_name not in modes_dict):
     sys.stderr.write("Unknown engine: %s\n" % engine_name)
