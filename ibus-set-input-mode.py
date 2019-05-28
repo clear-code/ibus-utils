@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/bin/sh
 
 # Copyright 2019 Takuro Ashie <ashie@clear-code.com>
 #
@@ -14,6 +14,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Find an available python command because recent systems install only "python3"
+# instead of "python" by default. Note that """ means a block comment on Python,
+# and ":" means no-op on shell script.
+
+""":"
+for cmd in python3 python; do
+  $cmd -V > /dev/null 2>&1 && exec $cmd $0 "$@"
+done
+
+echo "Cannot find Python interpreter!"
+exit 1
+":"""
 
 import os.path
 import sys
