@@ -129,13 +129,21 @@ def load_config():
     return conf
 
 
-def on_created(bus, result):
-    context = bus.create_input_context_async_finish(result)
-    if not context:
-        sys.stderr.write("Cannot get context\n")
+def on_get_context_name(bus, result):
+    name = bus.current_input_context_async_finish(result)
+    if not name:
+        sys.stderr.write("Cannot get the context name\n")
         sys.exit(1)
-    context.set_capabilities(IBus.Capabilite.FOCUS | IBus.Capabilite.PROPERTY)
-    context.focus_in()
+    IBus.InputContext.get_input_context_async(name, bus.get_connection(),
+                                              None,
+                                              on_get_input_context)
+
+
+def on_get_input_context(bus, result):
+    context = bus.get_input_context_async_finish(result)
+    if not context:
+        sys.stderr.write("Cannot get the context\n")
+        sys.exit(1)
     context.get_engine_async(-1, None, on_get_engine, context)
 
 
@@ -172,8 +180,7 @@ modes_dict = load_config()
 
 IBus.init()
 bus = IBus.Bus()
-bus.create_input_context_async("ibus-set-input-mode",
-                               -1, None, on_created)
+bus.current_input_context_async(-1, None, on_get_context_name)
 loop = GLib.MainLoop()
 GLib.timeout_add(1000, lambda: loop.quit())
 loop.run()
