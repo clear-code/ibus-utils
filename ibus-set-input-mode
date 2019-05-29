@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Find an available python command because recent systems install only "python3"
-# instead of "python" by default. Note that """ means a block comment on Python,
-# and ":" means no-op on shell script.
+# Find an available python command because recent systems install only
+# "python3" instead of "python" by default. Note that """ means a block
+# comment on Python, and ":" means no-op on shell script.
 
 """:"
 for cmd in python3 python; do
@@ -37,6 +37,10 @@ gi_require_version('IBus', '1.0')
 from gi.repository import IBus
 from gi.repository import GLib
 
+loop = None
+mode = None
+context = None
+modes_dict = None
 modes_dict_default = {
     "anthy": {
         "on":            "InputMode.Hiragana",
@@ -109,9 +113,9 @@ def load_config_dir(confdir):
 
 def load_config_path(path):
     conf = dict()
-    if (os.path.isdir(path)):
+    if os.path.isdir(path):
         conf.update(load_config_dir(path))
-    elif (os.path.isfile(path)):
+    elif os.path.isfile(path):
         conf.update(load_config_file(path))
     return conf
 
@@ -125,6 +129,37 @@ def load_config():
     return conf
 
 
+def on_created(bus, result):
+    context = bus.create_input_context_async_finish(result)
+    if not context:
+        sys.stderr.write("Cannot get context\n")
+        sys.exit(1)
+    context.set_capabilities(IBus.Capabilite.FOCUS | IBus.Capabilite.PROPERTY)
+    context.focus_in()
+    context.get_engine_async(-1, None, on_get_engine, context)
+
+
+def on_get_engine(bus, result, context):
+    engine = bus.get_engine_async_finish(result)
+    if not engine:
+        sys.stderr.write("Cannot get engine\n")
+        sys.exit(1)
+
+    engine_name = engine.get_name()
+    if engine_name not in modes_dict:
+        sys.stderr.write("Unknown engine: %s\n" % engine_name)
+        sys.exit(1)
+
+    modes = modes_dict[engine_name]
+
+    if mode not in modes:
+        sys.stderr.write("Unknown mode: %s\n" % mode)
+        sys.exit(1)
+
+    context.property_activate(modes[mode], IBus.PropState.CHECKED)
+    GLib.timeout_add(50, lambda: loop.quit())
+
+
 if (len(sys.argv) != 2):
     sys.stderr.write('''Usage: %s MODE
     MODE: on, off, hiragana, katakana, half-katakana, latin, wide-latin
@@ -133,31 +168,12 @@ if (len(sys.argv) != 2):
     sys.exit(1)
 
 mode = sys.argv[1]
+modes_dict = load_config()
 
 IBus.init()
 bus = IBus.Bus()
-
-ic = bus.create_input_context("ibus-set-input-mode")
-# "Capabilite" isn't a typo, it's actually declared in ibustypes.h
-ic.set_capabilities(IBus.Capabilite.FOCUS | IBus.Capabilite.PROPERTY)
-
-ic.focus_in()
-
-engine = ic.get_engine()
-engine_name = engine.get_name()
-
-modes_dict = load_config()
-
-if (engine_name not in modes_dict):
-    sys.stderr.write("Unknown engine: %s\n" % engine_name)
-    sys.exit(1)
-
-modes = modes_dict[engine_name]
-
-if (mode not in modes):
-    sys.stderr.write("Unknown mode: %s\n" % mode)
-    sys.exit(1)
-
-ic.property_activate(modes[mode], IBus.PropState.CHECKED)
-
-ic.focus_out()
+bus.create_input_context_async("ibus-set-input-mode",
+                               -1, None, on_created)
+loop = GLib.MainLoop()
+GLib.timeout_add(1000, lambda: loop.quit())
+loop.run()
