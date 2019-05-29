@@ -39,7 +39,6 @@ from gi.repository import GLib
 
 loop = None
 mode = None
-context = None
 modes_dict = None
 modes_dict_default = {
     "anthy": {
