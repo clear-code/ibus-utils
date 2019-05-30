@@ -167,6 +167,11 @@ def on_get_engine(bus, result, context):
     GLib.timeout_add(50, lambda: loop.quit())
 
 
+def on_timeout():
+    sys.stderr.write("IBus doesn't respond\n")
+    sys.exit(2)
+
+
 if (len(sys.argv) != 2):
     sys.stderr.write('''Usage: %s MODE
     MODE: on, off, hiragana, katakana, half-katakana, latin, wide-latin
@@ -181,5 +186,5 @@ IBus.init()
 bus = IBus.Bus()
 bus.current_input_context_async(-1, None, on_get_context_name)
 loop = GLib.MainLoop()
-GLib.timeout_add(1000, lambda: loop.quit())
+GLib.timeout_add(1000, on_timeout)
 loop.run()
